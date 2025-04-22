@@ -1,0 +1,71 @@
+@page "/author/create"
+@using BlazorApp.Models
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Додати автора</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+<EditForm Model="@newAuthor" OnValidSubmit="CreateNewAuthor">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    
+    <div class="form-group">
+        <label>Ім'я</label>
+        <InputText @bind-Value="newAuthor.Name" class="form-control" />
+        <ValidationMessage For="() => newAuthor.Name" />
+    </div>
+    
+    <div class="form-group">
+        <label>Прізвище</label>
+        <InputText @bind-Value="newAuthor.Surname" class="form-control" />
+        <ValidationMessage For="() => newAuthor.Surname" />
+    </div>
+    
+    <div class="form-group">
+        <label>Дата народження</label>
+        <InputDate @bind-Value="newAuthor.BirthDate" class="form-control" />
+        <ValidationMessage For="() => newAuthor.BirthDate" />
+    </div>
+    
+    <button type="submit" class="btn btn-primary mt-3">Додати</button>
+</EditForm>
+
+@code {
+    private Author newAuthor = new Author();
+    private string? errorMessage;
+    protected override void OnInitialized()
+    {
+        newAuthor.BirthDate = new DateTime(2000, 1, 1);
+    }
+    private async Task CreateNewAuthor()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newAuthor.Name) || string.IsNullOrWhiteSpace(newAuthor.Surname))
+            {
+                errorMessage = "Ім'я та прізвище є обов'язковими";
+                return;
+            }
+            if (!newAuthor.IsBirthDateValid())
+            {
+                errorMessage = "Автор повинен бути старше 18 років";
+                return;
+            }
+            
+            await Facade.CreateAuthor(newAuthor);
+            NavigationManager.NavigateTo("/authors");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка створення автора: {ex.Message}";
+        }
+    }
+}

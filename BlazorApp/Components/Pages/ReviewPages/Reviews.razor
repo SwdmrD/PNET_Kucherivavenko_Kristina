@@ -1,0 +1,64 @@
+@page "/reviews"
+@using Microsoft.EntityFrameworkCore
+@using BlazorApp.Models
+@inject AppDbContext DbContext
+@rendermode InteractiveServer
+
+<h3>Відгуки</h3>
+
+<div class="mb-3">
+    <a href="/review/create" class="btn btn-success btn-sm ml-2">Стоврити новий запис</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Користувач</th>
+                <th>Книга</th>
+                <th>Рейтинг</th>
+                <th>Дата створення</th>
+                <th>Текст</th>
+                <th>Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var review in reviews)
+            {
+                <tr>
+                    <td>@review.Id</td>
+                    <td>@(review.User?.UserName ?? "Невідомо")</td>
+                    <td>@(review.Book?.Title ?? "Невідомо")</td>
+                    <td>@review.Rating</td>
+                    <td>@review.CreatedAt.ToString("dd.MM.yyyy")</td>
+                    <td>@(review.Text.Length > 50 ? review.Text.Substring(0, 50) + "..." : review.Text)</td>
+                    <td>
+                        <a href="/review/edit/@review.Id" class="btn btn-sm btn-primary">Редагувати</a>
+                        <a href="/review/delete/@review.Id" class="btn btn-sm btn-danger">Видалити</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private List<Review> reviews = new List<Review>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            reviews = await DbContext.Reviews
+                .Include(r => r.User)
+                .Include(r => r.Book)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Помилка завантаження відгуків: {ex.Message}");
+            reviews = new List<Review>();
+        }
+    }
+}

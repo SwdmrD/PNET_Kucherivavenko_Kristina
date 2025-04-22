@@ -1,0 +1,30 @@
+@page "/users"
+@inject AppDbContext DbContext
+
+<h3>Користувачі</h3>
+<a href="/user/create" class="btn btn-success btn-sm ml-2">Додати користувача</a>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Id</th>
+            <th scope="col">Ім'я користувача</th>
+            <th scope="col">Пароль</th>
+            <th scope="col">Дії</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in DbContext.Users)
+        {
+            <tr>
+                <td>@user.Id</td>
+                <td>@user.UserName</td>
+                <td>@user.Password</td>
+                <td>
+                    <a href="/user/edit/@user.Id" class="btn btn-primary btn-sm">Редагувати</a>
+                    <a href="/user/delete/@user.Id" class="btn btn-danger btn-sm ms-2">Видалити</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

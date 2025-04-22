@@ -1,0 +1,85 @@
+@page "/user/delete/{Id:int}"
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@using BlazorApp.Models
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+
+<h3>Видалення користувача</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+    <div class="alert alert-danger">
+        <h4>Ви впевнені, що хочете видалити цього користувача?</h4>
+        <p><strong>Ім'я користувача:</strong> @user.UserName</p>
+        <div class="mt-3">
+            <button class="btn btn-danger" @onclick="DeleteUser">Видалити</button>
+            <button class="btn btn-secondary ms-2" @onclick="GoBack">Скасувати</button>
+        </div>
+    </div>
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private User user = new User();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            user = await Facade.GetUserById(Id) ?? new User();
+            if (user == null || string.IsNullOrEmpty(user.UserName))
+            {
+                errorMessage = $"Користувача з ID {Id} не знайдено";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteUser()
+    {
+        try
+        {
+            await Facade.DeleteUser(Id);
+            NavigationManager.NavigateTo("/users");
+        }
+        catch (DbUpdateException dbEx)
+        {
+            if (dbEx.InnerException is Npgsql.PostgresException pgEx)
+            {
+                if (pgEx.SqlState == "23503" || pgEx.SqlState == "23502")
+                {
+                    errorMessage = "Неможливо видалити користувача, оскільки з ним пов'язані інші записи (наприклад, рецензії). Спершу видаліть пов'язані записи.";
+                }
+                else
+                {
+                    errorMessage = $"Помилка бази даних: {pgEx.MessageText}";
+                }
+            }
+            else
+            {
+                errorMessage = "Неможливо видалити користувача через існуючі залежності в базі даних.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка видалення користувача: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+}

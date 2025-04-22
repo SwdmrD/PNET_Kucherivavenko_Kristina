@@ -1,0 +1,81 @@
+@page "/author/delete/{Id:int}"
+@using BlazorApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Видалити автора</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+<div class="alert alert-danger">
+    <h4>Ви впевнені, що хочете видалити цього автора?</h4>
+    <p><strong>@author.Name @author.Surname</strong></p>
+    <div class="mt-3">
+        <button class="btn btn-danger" @onclick="DeleteAuthor">Видалити</button>
+        <button class="btn btn-secondary ms-2" @onclick="GoBack">Скасувати</button>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Author author = new Author();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            author = await Facade.GetAuthorById(Id) ?? new Author();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteAuthor()
+{
+    try
+    {
+        await Facade.DeleteAuthor(Id);
+        NavigationManager.NavigateTo("/authors");
+    }
+    catch (DbUpdateException dbEx)
+    {
+        if (dbEx.InnerException is Npgsql.PostgresException pgEx)
+        {
+            if (pgEx.SqlState == "23503" || pgEx.SqlState == "23502")
+            {
+                errorMessage = "Неможливо видалити автора, оскільки з ним пов'язані книги. Спершу видаліть або змініть його книги.";
+            }
+            else
+            {
+                errorMessage = $"Помилка бази даних: {pgEx.MessageText}";
+            }
+        }
+        else
+        {
+            errorMessage = "Помилка видалення. Автор може бути пов'язаний з іншими записами в базі даних.";
+        }
+    }
+    catch (Exception ex)
+    {
+        errorMessage = $"Помилка видалення автора: {ex.Message}";
+    }
+}
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/authors");
+    }
+}

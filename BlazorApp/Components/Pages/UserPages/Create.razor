@@ -1,0 +1,58 @@
+@page "/user/create"
+@using BlazorApp.Models
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Додати користувача</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+<EditForm Model="@newUser" OnValidSubmit="CreateUser" FormName="createUserForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Ім'я користувача</label>
+        <InputText @bind-Value="newUser.UserName" class="form-control" />
+        <ValidationMessage For="() => newUser.UserName" />
+    </div>
+
+    <div class="form-group mt-2">
+        <label>Пароль</label>
+        <InputText @bind-Value="newUser.Password" class="form-control" type="password" />
+        <ValidationMessage For="() => newUser.Password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Створити</button>
+</EditForm>
+
+@code {
+    private User newUser = new User();
+    private string? errorMessage;
+
+    private async Task CreateUser()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newUser.UserName) || string.IsNullOrWhiteSpace(newUser.Password))
+            {
+                errorMessage = "Ім'я користувача та пароль є обов'язковими";
+                return;
+            }
+            
+            Console.WriteLine($"Creating user with name: {newUser.UserName}");
+            await Facade.CreateUser(newUser);
+            NavigationManager.NavigateTo("/users");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка створення користувача: {ex.Message}";
+        }
+    }
+}

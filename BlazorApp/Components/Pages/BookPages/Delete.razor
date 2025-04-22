@@ -1,0 +1,90 @@
+@page "/book/delete/{Id:int}"
+@using BlazorApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Видалити книгу</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+
+<div class="alert alert-danger">
+    <h4>Ви впевнені, що хочете видалити цю книгу?</h4>
+    <p><strong>Назва:</strong> @book.Title</p>
+    <div class="mt-3">
+        <button class="btn btn-danger" @onclick="DeleteBook">Видалити</button>
+        <button class="btn btn-secondary ms-2" @onclick="GoBack">Скасувати</button>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Book book = new Book();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var existingGenre = await Facade.GetGenreByName(book.Title);
+            if (existingGenre != null)
+            {
+                errorMessage = $"Жанр з назвою '{book.Title}' вже існує.";
+                return;
+            }
+            
+            book = await Facade.GetBookById(Id) ?? new Book();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження книги: {ex.Message}";
+            Console.WriteLine($"Помилка: {ex.Message}");
+        }
+    }
+
+  private async Task DeleteBook()
+{
+    try
+    {
+        await Facade.DeleteBook(Id);
+        NavigationManager.NavigateTo("/books");
+    }
+    catch (DbUpdateException dbEx)
+    {
+        if (dbEx.InnerException is Npgsql.PostgresException pgEx)
+        {
+            if (pgEx.SqlState == "23503" || pgEx.SqlState == "23502")
+            {
+                errorMessage = "Неможливо видалити книгу, оскільки вона використовується в інших таблицях.";
+            }
+            else
+            {
+                errorMessage = $"Помилка бази даних: {pgEx.MessageText}";
+            }
+        }
+        else
+        {
+            errorMessage = "Помилка оновлення бази даних. Книга може бути пов'язана з іншими записами.";
+        }
+    }
+    catch (Exception ex)
+    {
+        errorMessage = $"Помилка видалення книги: {ex.Message}";
+    }
+}
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/books");
+    }
+}

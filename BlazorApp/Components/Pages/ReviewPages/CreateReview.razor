@@ -1,0 +1,124 @@
+@page "/review/create"
+@using BlazorApp.Models
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Додати відгук</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+<EditForm Model="@newReview" OnValidSubmit="CreateNewReview" FormName="createReviewForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group mb-3">
+        <label>Користувач</label>
+        <InputSelect @bind-Value="newReview.UserId" class="form-select">
+            <option value="">-- Виберіть користувача --</option>
+            @foreach (var user in users)
+            {
+                <option value="@user.Id">@user.UserName</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="() => newReview.UserId" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Книга</label>
+        <InputSelect @bind-Value="newReview.BookId" class="form-select">
+            <option value="">-- Виберіть книгу --</option>
+            @foreach (var book in books)
+            {
+                <option value="@book.Id">@book.Title</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="() => newReview.BookId" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Рейтинг</label>
+        <InputSelect @bind-Value="newReview.Rating" class="form-select">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </InputSelect>
+        <ValidationMessage For="() => newReview.Rating" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Текст відгуку</label>
+        <InputTextArea @bind-Value="newReview.Text" class="form-control" rows="5" />
+        <ValidationMessage For="() => newReview.Text" />
+    </div>
+
+    <div class="mt-3">
+        <button class="btn btn-primary" type="submit">Створити</button>
+        <button class="btn btn-secondary ms-2" @onclick="GoBack">Скасувати</button>
+    </div>
+</EditForm>
+
+@code {
+    private Review newReview = new Review();
+    private List<User> users = new List<User>();
+    private List<Book> books = new List<Book>();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await Facade.GetAllUsers() ?? new List<User>();
+            books = await Facade.GetAllBooks() ?? new List<Book>();
+            newReview.CreatedAt = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+        }
+    }
+
+    private async Task CreateNewReview()
+    {
+        try
+        {
+            if (newReview.UserId == null || newReview.UserId == 0)
+            {
+                errorMessage = "Виберіть користувача";
+                return;
+            }
+            
+            if (newReview.BookId == null || newReview.BookId == 0)
+            {
+                errorMessage = "Виберіть книгу";
+                return;
+            }
+            
+            var existingReview = await Facade.GetReviewByUserAndBook((int)newReview.UserId, (int)newReview.BookId);
+            if (existingReview != null)
+            {
+                errorMessage = "Цей користувач вже залишив відгук для цієї книги.";
+                return;
+            }
+            
+            await Facade.CreateReview(newReview);
+            NavigationManager.NavigateTo("/reviews");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка створення відгуку: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/reviews");
+    }
+}

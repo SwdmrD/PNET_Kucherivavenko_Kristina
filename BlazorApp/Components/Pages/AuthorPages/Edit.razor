@@ -1,0 +1,79 @@
+@page "/author/edit/{Id:int}"
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+@using BlazorApp.Models
+
+<h3>Редагувати автора</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+<EditForm Model="@author" OnValidSubmit="UpdateAuthor">
+    <DataAnnotationsValidator />
+    <div class="form-group">
+        <label>Ім'я</label>
+        <InputText @bind-Value="author.Name" class="form-control" />
+        <ValidationMessage For="() => author.Name" />
+    </div>
+    <div class="form-group">
+        <label>Прізвище</label>
+        <InputText @bind-Value="author.Surname" class="form-control" />
+        <ValidationMessage For="() => author.Surname" />
+    </div>
+    <div class="form-group">
+        <label>Дата народження</label>
+        <InputDate @bind-Value="author.BirthDate" class="form-control" />
+        <ValidationMessage For="() => author.BirthDate" />
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="GoBack">Скасувати</button>
+    </div>
+</EditForm>
+
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Author author = new Author();
+
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        author = await Facade.GetAuthorById(Id) ?? new Author();
+    }
+
+    private async Task UpdateAuthor()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(author.Name) || string.IsNullOrWhiteSpace(author.Surname))
+            {
+                errorMessage = "Ім'я та прізвище є обов'язковими";
+                return;
+            }
+            if (!author.IsBirthDateValid())
+            {
+                errorMessage = "Автор повинен бути старше 18 років";
+                return;
+            }
+    
+            await Facade.UpdateAuthor(author);
+            NavigationManager.NavigateTo("/authors");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка створення автора: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/authors");
+    }
+}

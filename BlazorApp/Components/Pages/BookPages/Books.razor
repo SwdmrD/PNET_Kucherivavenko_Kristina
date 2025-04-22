@@ -1,0 +1,57 @@
+@page "/books"
+@using Microsoft.EntityFrameworkCore
+@using BlazorApp.Models
+@inject AppDbContext DbContext
+
+<h3>Книги</h3>
+
+<div class="mb-3">
+    <a href="/book/create" class="btn btn-success btn-sm ml-2">Створити новий запис</a>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Назва</th>
+            <th>Автор</th>
+            <th>Жанр</th>
+            <th>Дії</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var book in books)
+        {
+            <tr>
+                <td>@book.Id</td>
+                <td>@book.Title</td>
+                <td>@(book.Author?.Name ?? "Невідомо") @(book.Author?.Surname ?? "Невідомо")</td>
+                <td>@(book.Genre?.Name ?? "Невідомо")</td>
+                <td>
+                    <a href="/book/edit/@book.Id" class="btn btn-primary btn-sm">Редагувати</a>
+                    <a href="/book/delete/@book.Id" class="btn btn-danger btn-sm ml-2">Видалити</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Book> books = new List<Book>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            books = await DbContext.Books
+            .Include(b => b.Author)
+            .Include(b => b.Genre)
+            .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Помилка завантаження книг: {ex.Message}");
+            books = new List<Book>();
+        }
+    }
+}

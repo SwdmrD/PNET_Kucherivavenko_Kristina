@@ -1,0 +1,49 @@
+@page "/genre/create"
+@using BlazorApp.Models
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Додати жанр</h3>
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+<EditForm Model="@newGenre" OnValidSubmit="CreateNewGenre" FormName="createGenreForm">
+    <DataAnnotationsValidator />
+    <div class="form-group">
+        <label for="genreName">Назва</label>
+        <InputText id="genreName" @bind-Value="newGenre.Name" class="form-control" />
+        <ValidationMessage For="() => newGenre.Name" />
+    </div>
+    <p></p>
+    <button type="submit" class="btn btn-primary">Create</button>
+</EditForm>
+
+@code {
+    private Genre newGenre = new Genre();
+    private string errorMessage = string.Empty; 
+
+    private async Task CreateNewGenre()
+    {
+        errorMessage = string.Empty; 
+        try
+        {
+            var existingGenre = await Facade.GetGenreByName(newGenre.Name);
+            if (existingGenre != null)
+            {
+                errorMessage = $"Жанр з назвою '{newGenre.Name}' вже існує.";
+                return;
+            }
+            
+            await Facade.CreateGenre(newGenre);
+            NavigationManager.NavigateTo("/genres");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка при створенні жанру: {ex.Message}";
+        }
+    }
+}

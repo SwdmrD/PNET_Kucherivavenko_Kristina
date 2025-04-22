@@ -1,0 +1,84 @@
+@page "/genre/edit/{Id:int}"
+@using BlazorApp.Models
+@inject LibraryFacade Facade
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<h3>Редагувати жанр</h3>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <p>@errorMessage</p>
+    </div>
+}
+
+<EditForm Model="@genre" OnValidSubmit="UpdateGenre" FormName="editGenreForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="genreName">Назва</label>
+        <InputText id="genreName" @bind-Value="genre.Name" class="form-control" />
+        <ValidationMessage For="() => genre.Name" />
+    </div>
+
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="GoBack">Відмінити</button>
+    </div>
+</EditForm>
+
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Genre genre = new Genre();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            genre = await Facade.GetGenreById(Id) ?? new Genre();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження даних: {ex.Message}";
+            Console.WriteLine($"Помилка: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateGenre()
+    {
+        try
+        {
+            var existingGenre = await Facade.GetGenreByName(genre.Name);
+            if (existingGenre != null)
+            {
+                errorMessage = $"Жанр з назвою '{genre.Name}' вже існує.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(genre.Name))
+            {
+                errorMessage = "Назва жанру є обов'язковою";
+                return;
+            }
+
+            await Facade.UpdateGenre(genre);
+            NavigationManager.NavigateTo("/genres");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка оновлення жанру: {ex.Message}";
+            Console.WriteLine($"Помилка: {ex.Message}");
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/genres");
+    }
+}
